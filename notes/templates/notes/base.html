@@ -1,0 +1,542 @@
+{% load i18n %}
+{% load static %}
+<!DOCTYPE html>
+<html class="has-background-light">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>{% block title %}Simple Notes{% endblock %}</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous">
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@creativebulma/bulma-badge@1.0.1/dist/bulma-badge.min.css">
+		<link rel="stylesheet" href="https://unpkg.com/bulma-calendar@6.1.6/dist/css/bulma-calendar.min.css">
+		{% if theme and theme != 'default' %}
+			<link rel="stylesheet" href="https://jenil.github.io/bulmaswatch/{{ theme }}/bulmaswatch.min.css">
+		{% endif %}
+		<link rel="stylesheet" href="https://unpkg.com/@trevoreyre/autocomplete-js@2.2.0/dist/style.css"/>
+		<link rel="stylesheet" href="{% static 'styles/bulma-timeline.min.css' %}">
+		<style>
+			html {
+				scrollbar-width: none;
+			}
+
+			.datetimepicker-dummy {
+				display: none;
+			}
+
+			::-webkit-scrollbar {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		{% if user.is_authenticated %}
+			<header style="border-radius: 0" class="box px-0 py-0">
+				<nav class="navbar">
+					<div class="container">
+						<div class="navbar-brand">
+							<a class="navbar-item" href="{% url 'notes:index' %}"><b>Simple Notes</b></a>
+							<span class="navbar-burger burger" data-target="navbarMenuHero">
+								<span></span>
+								<span></span>
+								<span></span>
+							</span>
+						</div>
+
+						<div id="navbarMenuHero" class="navbar-menu">
+							<div class="navbar-end has-text-centered">
+								<a class="navbar-item my-2 mx-2 is-active" href="{% url 'notes:index' %}" title="">{% translate "Home" context "Link's text" %}</a>
+								<a class="navbar-item my-2 mx-2 modal-button" data-target="account-settings-modal">{% translate "Settings" context "Link's text" %}</a>
+								{% if user.is_superuser %}
+									<a class="navbar-item my-2 mx-2 modal-button" href="{% url 'admin:index' %}">{% translate "Admin Panel" context "Link's text" %}</a>
+								{% endif %}
+								<a class="navbar-item {% if theme and theme != 'default' %}modal-{% endif %}button my-2 mx-2" href="{% url 'notes:log-out' %}">{% translate "Log out" context "Link's text" %}</a>
+							</div>
+						</div>
+					</div>
+				</nav>
+			</header>
+		{% endif %}
+
+		<div class="block columns is-multiline mt-3 mx-0">
+			{% if user.is_authenticated %}
+				<aside class="column is-12-tablet is-2-desktop pt-0">
+					<div id="autocomplete" class="box menu autocomplete" style="background: none; padding: 0; margin-bottom: 10px;">
+						<input class="autocomplete-input" style="background-color: #fff" />
+						<ul class="autocomplete-result-list"></ul>
+					</div>
+					<div class="box menu">
+						<p class="menu-label">
+							<span class="columns is-mobile">
+								<span class="column is-3 has-text-left">
+									{% translate "Notebooks" context "List title" %}
+								</span>
+								<span class="column is-9 has-text-right">
+									<a class="modal-button" data-target="new-notebook-modal" title="{% translate "New Notebook (Alt + Shift + N)" context "Tooltip" %}">
+										<span class="icon is-small">
+											<i class="fa fa-plus" aria-hidden="true"></i>
+										</span>
+										<span>{% translate "Notebook" context "Text on a button" %}</span>
+									</a>
+								</span>
+							</span>
+						</p>
+						<ul class="menu-list">
+							{% if notebooks %}
+								{% for notebook in notebooks %}
+									{% if notebook_title and notebook.title == notebook_title %}
+										<li>
+											<a style="position: relative" href="{% url 'notes:view-notes' notebook.title %}">
+												<span title="{% translate "Amount of notes" context "Tooltip on a badge" %}" class="badge is-left is-info">{{ notebook.notes_count }}</span>
+												<b>{{ notebook.title }}</b>
+											</a>
+											<ul>
+												<li>
+													{% if notes %}
+														{% for note in notes %}
+															{% if note_title == note.title %}
+																<a class="is-active" href="{% url 'notes:edit-note' notebook_title note.title %}">{{ note.title }}</a>
+															{% else %}
+																<a href="{% url 'notes:edit-note' notebook_title note.title %}">{{ note.title }}</a>
+															{% endif %}
+														{% endfor %}
+													{% else %}
+														<a>{% translate "Empty" context "Empty list text" %}</a>
+													{% endif %}
+												</li>
+											</ul>
+										</li>
+									{% else %}
+										<li>
+											<a style="position: relative" href="{% url 'notes:view-notes' notebook.title %}">
+												<span title="{% translate "Amount of notes" context "Tooltip on a badge" %}" class="badge is-left is-info">{{ notebook.notes_count }}</span>
+												{{ notebook.title }}
+											</a>
+										</li>
+									{% endif %}
+								{% endfor %}
+							{% else %}
+								<li><a>{% translate "Empty" context "Empty list text" %}</a></li>
+							{% endif %}
+						</ul>
+
+						<p class="menu-label">
+							{% translate "Shared Notes" context "List title" %}
+						</p>
+						<ul class="menu-list">
+							{% if shared_notes %}
+								{% for note in shared_notes %}
+									{% if shared_note and shared_note.unique_secret == note.unique_secret %}
+										<li><a class="is-active" href="{% url 'notes:view-shared-note' note.unique_secret %}">{{ note.note.title }}</a></li>
+									{% else %}
+										<li><a href="{% url 'notes:view-shared-note' note.unique_secret %}">{{ note.note.title }}</a></li>
+									{% endif %}
+								{% endfor %}
+							{% else %}
+								<li><a>{% translate "Empty" context "Empty list text" %}</a></li>
+							{% endif %}
+						</ul>
+					</div>
+					{% if notebook_title and note_title %}
+						<div class="box menu pt-0 pb-2 mb-0 is-hidden-mobile">
+							<p class="menu-label">
+								<span class="columns is-mobile">
+									<span class="column is-7 has-text-left">
+										{% translate "Version Control" context "List title" %}
+									</span>
+								</span>
+							</p>
+							<div>
+								<form action="{% url 'notes:add-note-version' notebook_title note_title %}" method="POST">
+									{% csrf_token %}
+									<div class="field">
+										<p class="control has-icons-left has-icons-right">
+											<input class="input" type="text" name="message" placeholder="{% translate "Message (Optional)" context "Input placeholder" %}">
+											<span class="icon is-small is-left">
+												<i class="far fa-comment-dots"></i>
+											</span>
+										</p>
+									</div>
+									<div class="columns mb-0">
+										<div class="column is-9 pr-1">
+											<button type="submit" class="button is-fullwidth" title="{% translate "Save this version" context "Button" %}">{% translate "Add" context "Button" %}</button>
+										</div>
+										<div class="column is-3 pl-1">
+											<a href="{% url 'notes:view-note-versions' notebook_title note_title %}" class="button is-fullwidth" title="{% translate "View All Saved Versions" context "Tooltip" %}">
+												<span class="icon is-small">
+													<i class="fas fa-list"></i>
+												</span>
+											</a>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+						<div class="box menu is-hidden-desktop is-hidden-tablet pt-0">
+							<p class="menu-label">
+								<span class="columns is-mobile">
+									<span class="column is-7 has-text-left">
+										{% translate "Version Control" context "List title" %}
+									</span>
+								</span>
+							</p>
+							<div>
+								<form action="{% url 'notes:add-note-version' notebook_title note_title %}" method="POST">
+									{% csrf_token %}
+									<div class="field">
+										<p class="control has-icons-left has-icons-right">
+											<input class="input" name="message" type="text" placeholder="{% translate "Message (Optional)" context "Input placeholder" %}">
+											<span class="icon is-small is-left">
+												<i class="far fa-comment-dots"></i>
+											</span>
+										</p>
+									</div>
+									<div class="columns is-mobile">
+										<div class="column is-9">
+											<button type="submit" class="button is-fullwidth" title="{% translate "Save this version" context "Button" %}">{% translate "Add" context "Button" %}</button>
+										</div>
+										<div class="column is-3">
+											<a href="{% url 'notes:view-note-versions' notebook_title note_title %}" class="button is-fullwidth" title="{% translate "View All Saved Versions" context "Tooltip" %}">
+												<span class="icon is-small">
+													<i class="fas fa-list"></i>
+												</span>
+											</a>
+										</div>
+									</div>
+								</form>
+							</div>
+						</div>
+					{% endif %}
+				</aside>
+			{% endif %}
+
+			{% block above-content %}{% endblock %}
+
+			<main class="column {% if user.is_authenticated %}is-12-tablet is-10-desktop{% endif %} pt-0">
+				<div style="min-height: {% if user.is_authenticated %}80vh{% else %}96vh{% endif %};" class="box">
+					{% block content %}{% endblock %}
+				</div>
+			</main>
+		</div>
+
+		{% if user.is_authenticated %}
+			<div class="modal" id="new-notebook-modal">
+				<div class="modal-background"></div>
+				<div class="modal-card">
+					<header class="modal-card-head">
+						<p class="modal-card-title">{% translate "New Notebook" context "Heading of modal window" %}</p>
+						<button class="delete" aria-label="close"></button>
+					</header>
+					<form action="{% url 'notes:create-notebook' %}" method="POST">
+						{% csrf_token %}
+						<section class="modal-card-body">
+							<div class="field">
+								<label class="label" for="create-notebook-field-title">{% translate "Title" context  "Label's text on create notebook modal window" %}</label>
+								<p class="control has-icons-left">
+									<input id="create-notebook-field-title" class="input" type="text" placeholder="{% translate "My Lovely Notebook" context "Placeholder" %}" name="title" required>
+									<span class="icon is-small is-left">
+										<i class="fa fa-font" aria-hidden="true"></i>
+									</span>
+								</p>
+							</div>
+						</section>
+						<footer class="modal-card-foot">
+							<button type="submit" class="button is-link">{% translate "Save" context "Text on a button" %}</button>
+							<button type="reset" class="button button-close">{% translate "Cancel" context "Text on a button" %}</button>
+						</footer>
+					</form>
+				</div>
+			</div>
+
+			{% if notebook_title %}
+				<div class="modal" id="edit-notebook-modal">
+					<div class="modal-background"></div>
+					<div class="modal-card">
+						<header class="modal-card-head">
+							<p class="modal-card-title">{% translate "Edit Notebook" context "Heading of modal window" %}</p>
+							<button class="delete" aria-label="close"></button>
+						</header>
+						<form action="{% url 'notes:edit-notebook' notebook_title %}" method="POST">
+							{% csrf_token %}
+							<section class="modal-card-body">
+								<div class="field">
+									<label class="label" for="edit-notebook-field-title">{% translate "Title" context "Label's text" %}</label>
+									<p class="control has-icons-left">
+										<input id="edit-notebook-field-title" class="input" type="text" placeholder="{{ notebook_title }}" name="title" value="{{ notebook_title }}" required>
+										<span class="icon is-small is-left">
+											<i class="fa fa-font" aria-hidden="true"></i>
+										</span>
+									</p>
+								</div>
+							</section>
+							<footer class="modal-card-foot">
+								<button type="submit" class="button is-link">{% translate "Update" context "Text on a button" %}</button>
+								<button type="reset" class="button button-close">{% translate "Cancel" context "Text on a button" %}</button>
+							</footer>
+						</form>
+					</div>
+				</div>
+			{% endif %}
+
+			{% if user_settings_form and profile_settings_form %}
+				<div class="modal" id="account-settings-modal">
+					<div class="modal-background"></div>
+					<div class="modal-card">
+						<header class="modal-card-head">
+							<p class="modal-card-title">{% translate "Settings" context "Heading of modal window" %}</p>
+							<button class="delete" aria-label="close"></button>
+						</header>
+						<form action="{% url 'notes:settings' %}" method="POST">
+							{% csrf_token %}
+							<section class="modal-card-body">
+								<div class="field">
+									<label class="label" for="field-username">{% translate "Username" context "Label" %}</label>
+									<p class="control has-icons-left">
+										<input id="field-username" class="input" type="text" placeholder="{% translate "Username" context "Placeholder" %}" name="username" value="{{ user_settings_form.username.value }}" required>
+										<span class="icon is-small is-left">
+											<i class="fas fa-user-circle"></i>
+										</span>
+									</p>
+									<p class="help is-danger has-text-centered">
+										{{ user_settings_form.errors.username }}
+									</p>
+								</div>
+
+								<div class="field">
+									<label class="label" for="field-email">{% translate "Email" context "Label" %}</label>
+									<p class="control has-icons-left">
+										<input id="field-email" class="input" type="email" placeholder="{% translate "Email" context "Placeholder" %}" name="email" value="{{ user_settings_form.email.value }}" required>
+										<span class="icon is-small is-left">
+											<i class="fas fa-envelope"></i>
+										</span>
+									</p>
+									<p class="help is-danger has-text-centered">
+										{{ user_settings_form.errors.email }}
+									</p>
+								</div>
+
+								<div class="field">
+									<label class="label" for="field-language">{% translate "Language" context "Label" %}</label>
+									<p class="control has-icons-left">
+										<span class="select is-fullwidth">
+											<select name="language" id="field-language">
+												{% for value, text in profile_settings_form.language.field.choices %}
+													<option {% if value == profile_settings_form.language.value %} selected {% endif %} value="{{ value }}">{{ text }}</option>
+												{% endfor %}
+											</select>
+										</span>
+										<span class="icon is-small is-left">
+											<i class="fas fa-language"></i>
+										</span>
+									</p>
+									<p class="help is-danger has-text-centered">
+										{{ profile_settings_form.errors.language }}
+									</p>
+								</div>
+
+								<div class="field">
+									<label class="label" for="field-theme">{% translate "Theme" context "Label" %}</label>
+									<p class="control has-icons-left">
+										<span class="select is-fullwidth">
+											<select name="theme" id="field-theme">
+												{% for value, text in profile_settings_form.theme.field.choices %}
+													<option {% if value == profile_settings_form.theme.value %} selected {% endif %} value="{{ value }}">{{ text }}</option>
+												{% endfor %}
+											</select>
+										</span>
+										<span class="icon is-small is-left">
+											<i class="fas fa-palette"></i>
+										</span>
+									</p>
+									<p class="help is-danger has-text-centered">
+										{{ profile_settings_form.errors.theme }}
+									</p>
+								</div>
+							</section>
+							<footer class="modal-card-foot">
+								<button type="submit" class="button is-link">{% translate "Save" context "Text on a button" %}</button>
+								<button type="reset" class="button button-close">{% translate "Cancel" context "Text on a button" %}</button>
+							</footer>
+						</form>
+					</div>
+				</div>
+			{% endif %}
+		{% endif %}
+
+		{% if messages %}
+			{% load static %}
+			<script src="{% static 'scripts/tata.js' %}"></script>
+		{% endif %}
+		<script src="https://unpkg.com/keyboardjs@2.6.4/dist/keyboard.js"></script>
+		<script src="https://unpkg.com/@trevoreyre/autocomplete-js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6"></script>
+		<script>
+			{% if messages %}
+				{% for message in messages %}
+					tata.{{ message.tags }}('{{ message.tags|capfirst }}', '{{ message }}');
+				{% endfor %}
+			{% endif %}
+			const getAll = (selector) => Array.prototype.slice.call(document.querySelectorAll(selector), 0);
+
+			document.addEventListener('DOMContentLoaded', () => {
+				// Modals
+				var rootEl = document.documentElement;
+				var $modals = getAll('.modal');
+				var $modalButtons = getAll('.modal-button');
+				var $modalCloses = getAll('.modal-background, .modal-close, .modal-card-head .delete, .modal-card-foot .button-close');
+
+				if ($modalButtons.length > 0) {
+					$modalButtons.forEach(function ($el) {
+						$el.addEventListener('click', function () {
+							var target = $el.dataset.target;
+							var $target = document.getElementById(target);
+							rootEl.classList.add('is-clipped');
+							$target.classList.add('is-active');
+						});
+					});
+				}
+
+				// close a modal window by pressing on an x button
+				if ($modalCloses.length > 0) {
+					$modalCloses.forEach(function ($el) {
+						$el.addEventListener('click', function () {
+							closeModals();
+						});
+					});
+				}
+
+				// open modal for creating a notebook
+				keyboardJS.bind('alt + shift + n', (e) => {
+					e.preventDefault();
+
+					document.documentElement.classList.add('is-clipped');
+					document.getElementById('new-notebook-modal').classList.add('is-active');
+					document.getElementById('create-notebook-field-title').focus();
+				});
+
+				{% if notebook_title %}
+					// open url for creating a note
+					keyboardJS.bind('alt + n', (e) => {
+						e.preventDefault();
+
+						window.open("{% url 'notes:create-note' notebook_title %}", "_self");
+					});
+
+					// open a modal window for editing current notebook
+					keyboardJS.bind('alt + e', (e) => {
+						e.preventDefault();
+
+						document.documentElement.classList.add('is-clipped');
+						document.getElementById('edit-notebook-modal').classList.add('is-active');
+						document.getElementById('edit-notebook-field-title').focus();
+					});
+
+					// open url for removing a notebook
+					keyboardJS.bind('delete', (e) => {
+						e.preventDefault();
+
+						window.open("{% url 'notes:remove-notebook' notebook_title %}", "_self");
+					});
+				{% endif %}
+
+				{% if notebook_title and note_title %}
+					// open url for removing a note
+					keyboardJS.bind('delete', (e) => {
+						e.preventDefault();
+
+						window.open("{% url 'notes:remove-note' notebook_title note_title %}", "_self");
+					});
+				{% endif %}
+
+				// close a modal window
+				keyboardJS.bind('esc', (e) => {
+					e.preventDefault();
+					closeModals();
+				});
+
+				function closeModals() {
+					rootEl.classList.remove('is-clipped');
+					$modals.forEach(function ($el) {
+						$el.classList.remove('is-active');
+					});
+				}
+
+  				// Navbar Burgers
+
+				// Get all "navbar-burger" elements
+				const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+				// Check if there are any navbar burgers
+				if ($navbarBurgers.length > 0) {
+					// Add a click event on each of them
+					$navbarBurgers.forEach( el => {
+						el.addEventListener('click', () => {
+							// Get the target from the "data-target" attribute
+							const target = el.dataset.target;
+							const $target = document.getElementById(target);
+
+							// Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+							el.classList.toggle('is-active');
+							$target.classList.toggle('is-active');
+						});
+					});
+				}
+			});
+
+			{% if search_data %}
+				const search_data = {{ search_data|safe }};
+				const fuse = new Fuse(search_data, {
+					keys: ['notebook_title', 'note_title'],
+				});
+
+				new Autocomplete('#autocomplete', {
+					search: input => {
+						if (input.length < 1) { return [] }
+
+						const result = fuse.search(input);
+						if (!result.length) {
+							return [input];
+						}
+
+						const result_items = [];
+						result.forEach((item) => {
+							item = item.item;
+							const notebook_title = item.notebook_title;
+							const note_title = item.note_title;
+
+							if (note_title) {
+								result_items.push(notebook_title + ' ► ' + note_title);
+								return;
+							}
+
+							result_items.push(notebook_title);
+						});
+						return result_items;
+					},
+					onSubmit: result => {
+						const titles = result.split(' ► ');
+						const notebook_title = titles[0];
+						const note_title = titles.length > 1 ? titles[1] : null;
+
+						search_data.forEach((item) => {
+							if (item.notebook_title === notebook_title && note_title !== null && item.note_title === note_title) {
+								window.open(item.note_url, '_self');
+							}
+
+							if (item.notebook_title === notebook_title && note_title === null) {
+								window.open(item.notebook_url, '_self');
+							}
+						});
+					},
+				 });
+
+				// focus search bar
+				keyboardJS.bind('alt + /', (e) => {
+					e.preventDefault();
+
+					document.getElementById('autocomplete').children[0].focus()
+				});
+			{% endif %}
+		</script>
+	</body>
+</html>
