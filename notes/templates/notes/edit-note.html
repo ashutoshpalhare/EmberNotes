@@ -1,0 +1,227 @@
+{% extends 'notes/base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{{ note_title }} | {{ notebook_title }}{% endblock %}
+
+<!-- FOR MOBILE -->
+{% block above-content %}
+	<div class="column is-12 pt-0 is-hidden-desktop is-hidden-tablet">
+		<div class="box">
+			<nav class="tabs is-toggle is-centered">
+				<ul>
+					<li>
+						<a onclick="document.forms[0].submit();return false;" title="{% translate "Save" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-save"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a href="{% url 'notes:remove-note' notebook_title note_title %}" title="{% translate "Remove" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-trash-alt"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a onclick="document.forms[0].action += '?share=True'; document.forms[0].submit(); return false;" title="{% translate "Share" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-share-square"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a href="{% url 'notes:export-to-pdf' notebook_title note_title %}" title="{% translate "Export To PDF" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-file-pdf"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a href="{% url 'notes:view-notes' notebook_title %}" title="{% translate "Go Back" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-undo-alt"></i>
+							</span>
+						</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+{% endblock %}
+
+{% block content %}
+	<form action="{% url 'notes:edit-note' notebook_title note_title %}" method="POST" id="edit-note-form">
+		{% csrf_token %}
+
+		<style>
+			input:focus {
+				box-shadow: inset 0 .0625em .125em rgba(10,10,10,.05);
+			}
+
+			input:not(:focus) {
+				box-shadow: none;
+			}
+		</style>
+
+		<!-- FOR DESKTOP -->
+		<div class="columns is-hidden-mobile">
+			<input class="input column mt-2 ml-4 is-6" style="border: none;" type="text" placeholder="{% translate "My Note's Title" context "Placeholder" %}" name="title" value="{{ form.title.value }}">
+			<nav class="tabs is-toggle is-right column">
+				<ul>
+					<li>
+						<a onclick="this.closest('form').submit();return false;" title="{% translate "Save (Alt + S)" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-save"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a href="{% url 'notes:remove-note' notebook_title note_title %}" title="{% translate "Remove (Del)" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-trash-alt"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a onclick="this.closest('form').action += '?share=True'; this.closest('form').submit(); return false;"  title="{% translate "Share (Alt + Shift + S)" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-share-square"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a href="{% url 'notes:export-to-pdf' notebook_title note_title %}" title="{% translate "Export To PDF (Alt + Shift + E)" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-file-pdf"></i>
+							</span>
+						</a>
+					</li>
+					<li>
+						<a href="{% url 'notes:view-notes' notebook_title %}" title="{% translate "Go Back (Esc)" context "Tooltip" %}">
+							<span class="icon is-small">
+								<i class="fas fa-undo-alt"></i>
+							</span>
+						</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+
+		<!-- FOR MOBILE -->
+		<input class="input mb-4 is-hidden-desktop is-hidden-tablet" style="border: none; text-align: center" type="text" placeholder="{% translate "My Note's Title" context "Placeholder" %}" name="title" value="{{ note_title }}">
+
+		<article class="columns is-multiline is-desktop">
+			<section class="field column is-12 {% if note_edit_date %}mb-0{% endif %}">
+				<textarea id="text-editor" name="content" class="textarea is-fullwidth" style="min-height: 680px; resize: none;" spellcheck="false" placeholder="{% translate "Write something here." context "Placeholder" %}">{{ form.content.value }}</textarea>
+			</section>
+			{% if note_edit_date %}
+				<div class="field column is-12 has-text-grey-dark mb-1">
+					<div class="columns is-mobile">
+						<div class="column is-6 is-6-mobile is-mobile ml-4">
+							{{ note_edit_date }}
+						</div>
+						<div class="column is-mobile is-6 is-6-mobile mr-4 has-text-right">
+							{% if reminder_set %}
+								<a href="{% url 'notes:remove-reminder' notebook_title note_title %}" title="{% translate "Cancel reminder" context "Tooltip" %}" class="mr-6">{% translate "Cancel Reminder" context "Link" %}</a>
+							{% else %}
+								<a id="remind-me-button" title="{% translate "Send me a reminder to write later" context "Tooltip" %}" class="mr-6">{% translate "Remind Me" context "Link" %}</a>
+							{% endif %}
+						</div>
+					</div>
+				</div>
+			{% endif %}
+		</article>
+	</form>
+
+	<form action="{% url 'notes:set-reminder' notebook_title note_title %}" method="POST">
+		{% csrf_token %}
+		<input hidden id="remind-me-date-picker" type="date" name="remind-me-date">
+	</form>
+
+	<script src="{% static "scripts/bulma-calendar.js" %}"></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			// Initialize all inputs of type date
+			const calendars = bulmaCalendar.attach('[type="date"]', {
+				type: 'datetime',
+				color: 'info',
+				displayMode: 'dialog',
+				cancelLabel: '{% translate "Cancel" context "Button" %}',
+				validateLabel: '{% translate "OK" context "Button" %}',
+				weekStart: 1,
+				lang: '{{ language }}',
+				showClearButton: false,
+				showTodayButton: false,
+			});
+
+			// Loop on each calendar initialized
+			calendars.forEach(calendar => {
+				// Add listener to select event
+				calendar.on('select', date => {
+					console.log(date);
+				});
+			});
+
+			document.getElementsByClassName(
+				'datetimepicker-footer-validate', 'has-text-success', 'button', 'is-small', 'is-text'
+			)[0].onclick = () => {
+				const input = document.getElementById('remind-me-date-picker');
+
+				if (!input.value) {
+					return;
+				}
+
+				document.forms[3].submit();
+			};
+
+			keyboardJS.bind('alt + s', (e) => {
+				e.preventDefault();
+
+				document.getElementById('edit-note-form').submit();
+			});
+
+			keyboardJS.bind('esc', (e) => {
+				e.preventDefault();
+
+				let contains = false;
+				getAll('.modal').forEach((modal) => {
+					console.log(modal.classList.contains('is-active'));
+					if (modal.classList.contains('is-active')) {
+						contains = true;
+					}
+				});
+
+				if (!contains) {
+					window.open("{% url 'notes:view-notes' notebook_title %}", "_self");
+				}
+			});
+
+			keyboardJS.bind('alt + shift + s', (e) => {
+				e.preventDefault();
+
+				document.forms[0].action += '?share=True';
+				document.forms[0].submit();
+			});
+
+			keyboardJS.bind('alt + shift + e', (e) => {
+				e.preventDefault();
+
+				window.open("{% url 'notes:export-to-pdf' notebook_title note_title %}", "_self");
+			});
+
+			document.getElementById('text-editor').onkeydown = (e) => {
+				if (e.keyCode === 9) { // tab was pressed
+					document.execCommand('insertText', false, '\t');
+
+					return false;
+				}
+			};
+
+			document.getElementById('remind-me-button').addEventListener('click', () => {
+				document.querySelector('#remind-me-date-picker').bulmaCalendar.show();
+			});
+		});
+	</script>
+{% endblock %}
