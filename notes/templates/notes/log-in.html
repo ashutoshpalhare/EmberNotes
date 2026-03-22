@@ -1,0 +1,45 @@
+{% extends 'notes/centered-box-base.html' %}
+{% load i18n %}
+
+{% block title %}{% translate "Log in" context "Page title on login page" %} | Simple Notes{% endblock %}
+
+{% block content %}
+	<h1 class="title has-text-centered">{% translate "Log In" context "Heading" %}</h1>
+		<form action="{% url 'notes:log-in' %}" method="POST">
+			{% csrf_token %}
+			<input type="hidden" name="next" value="{{ next }}">
+			<div class="field">
+				<label class="label" for="field-username">{% translate "Username" context "Label" %}</label>
+				<p class="control has-icons-left">
+					<input id="field-username" class="input" type="text" placeholder="{% translate "Username" context "Placeholder" %}" name="username" required>
+					<span class="icon is-small is-left">
+						<i class="fas fa-user-circle"></i>
+					</span>
+				</p>
+			</div>
+
+			<div class="field">
+				<label class="label" for="field-password">{% translate "Password" context "Label" %}</label>
+				<p class="control has-icons-left">
+					<input id="field-password" class="input" type="password" placeholder="{% translate "Password" context "Placeholder" %}" name="password" required>
+					<span class="icon is-small is-left">
+						<i class="fas fa-lock"></i>
+					</span>
+				</p>
+			</div>
+
+			<div class="field pt-2">
+				<p class="control">
+					<input class="input button is-link has-text-centered" type="submit" value="Log in">
+				</p>
+				<p class="help is-danger has-text-centered">
+					{% if form.errors %}
+						{% translate "Please enter a correct username and password." context "Error message" %}
+					{% endif %}
+				</p>
+			</div>
+		</form>
+		<div class="block has-text-centered pt-3">
+			<small>{% translate "if you're not a member" %} <a href="{% url 'notes:sign-up' %}">{% translate "Sign up" context "Link's text" %}</a></small>
+		</div>
+{% endblock %}
