@@ -12,3 +12,4 @@ class Theme(models.TextChoices):
 class Language(models.TextChoices):
     UK = "uk", _("Українська")
     EN = "en", _("English")
+# refinement 10
