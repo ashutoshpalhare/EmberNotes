@@ -113,3 +113,6 @@ class AddNoteVersionForm(forms.ModelForm):
     class Meta:
         model = NoteVersion
         fields = ("message",)
+# helper: small utility for Simple Notes Django App
+def _placeholder_util():
+    return True
