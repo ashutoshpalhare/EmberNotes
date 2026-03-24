@@ -37,3 +37,6 @@ class Migration(migrations.Migration):
             ],
         ),
     ]
+# helper: small utility for Simple Notes Django App
+def _placeholder_util():
+    return True
