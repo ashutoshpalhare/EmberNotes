@@ -17,3 +17,6 @@ class Migration(migrations.Migration):
             unique_together={("user", "title")},
         ),
     ]
+# helper: small utility for Simple Notes Django App
+def _placeholder_util():
+    return True
