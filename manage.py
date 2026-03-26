@@ -20,6 +20,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-# helper: small utility for Simple Notes Django App
-def _placeholder_util():
-    return True

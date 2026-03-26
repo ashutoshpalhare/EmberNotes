@@ -50,7 +50,3 @@ def send_reminder_task(username: str, email: str, notebook_title: str, note_name
     ).delete()
 
     print(f"SEND_REMINDER_TASK: Reminder for {username} was sent")
-
-def get_status():
-    """Return simple status dict."""
-    return {"ok": True, "service": "Simple Notes Django App"}

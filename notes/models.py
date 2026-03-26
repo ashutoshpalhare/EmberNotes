@@ -95,4 +95,3 @@ class Reminder(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.note.notebook.user}: {self.note.title}"
-// Simple Notes Django App update
