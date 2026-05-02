@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="shell">
+  <aside class="side" id="side" aria-label="Main navigation">
+    <div class="side-top">
+      <a class="brand" href="{% url 'notes:list' %}"><svg class="ico ico-fill"><use href="#i-flame"/></svg>Ember</a>
+      <button type="button" class="icon-btn only-mobile" data-drawer-close aria-label="Close menu"><svg class="ico"><use href="#i-x"/></svg></button>
+    </div>
+    <form method="post" action="{% url 'notes:create' %}" id="new-note-form">{% csrf_token %}
+      <button class="btn btn-primary btn-block"><svg class="ico"><use href="#i-plus"/></svg>New note</button>
+    </form>
+    <nav class="nav">
+      <a href="{% url 'notes:list' %}" {% if current_view == 'all' and not tag %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-notes"/></svg>All notes<span>{{ nav_counts.active }}</span></a>
+      <a href="{% url 'notes:list' %}?view=pinned" {% if current_view == 'pinned' and not tag %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-pin"/></svg>Pinned<span>{{ nav_counts.pinned }}</span></a>
+      <a href="{% url 'notes:list' %}?view=archive" {% if current_view == 'archive' and not tag %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-archive"/></svg>Archive<span>{{ nav_counts.archive }}</span></a>
+      <a href="{% url 'notes:list' %}?view=trash" {% if current_view == 'trash' %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-trash"/></svg>Trash<span>{{ nav_counts.trash }}</span></a>
+    </nav>
+    {% if nav_tags %}
+    <div class="nav-group">
+      <h2>Tags</h2>
+      <nav class="nav nav-tags">
+        {% for t in nav_tags %}<a href="{% url 'notes:list' %}?tag={{ t.name|urlencode }}" {% if tag == t.name %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-tag"/></svg>{{ t.name }}<span>{{ t.n }}</span></a>{% endfor %}
+      </nav>
+    </div>
+    {% endif %}
+    <div class="side-foot">
+      <span class="who" title="{{ user.get_username }}">{{ user.get_username }}</span>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+        <button class="icon-btn" aria-label="Sign out" title="Sign out"><svg class="ico"><use href="#i-logout"/></svg></button>
+      </form>
+    </div>
+  </aside>
+  <div class="scrim" data-drawer-close></div>
+  <div class="main" id="content">{% block main %}{% endblock %}</div>
+</div>
+{% endblock %}

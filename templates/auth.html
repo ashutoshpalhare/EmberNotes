@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+<main class="auth" id="content">
+  <section class="auth-pitch" aria-hidden="true">
+    <a class="brand" href="/"><svg class="ico ico-fill"><use href="#i-flame"/></svg>Ember</a>
+    <p class="auth-line">Write it down. Find it later. Keep going.</p>
+    <p class="auth-sub">Notes with tags, pinning, archive and a safety net in the trash.</p>
+  </section>
+  <section class="auth-card">
+    <a class="brand only-mobile" href="/"><svg class="ico ico-fill"><use href="#i-flame"/></svg>Ember</a>
+    {% block auth %}{% endblock %}
+  </section>
+</main>
+{% endblock %}
