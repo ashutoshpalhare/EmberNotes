@@ -1,0 +1,11 @@
+.env
+*.sqlite3
+*.pyc
+__pycache__/
+venv/
+.venv/
+staticfiles/
+.DS_Store
+
+# Ignore setup script
+setup_history.py
