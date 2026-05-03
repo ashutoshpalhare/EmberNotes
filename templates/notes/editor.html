@@ -1,0 +1,55 @@
+{% extends "app.html" %}
+{% block title %}{{ note.display_title }} – Ember{% endblock %}
+{% block main %}
+<form id="note-form" class="editor" method="post" novalidate
+      {% if not readonly %}data-autosave-url="{% url 'notes:autosave' note.pk %}"{% endif %}>
+  {% csrf_token %}
+  <header class="ed-bar">
+    <button type="button" class="icon-btn only-mobile" data-drawer-open aria-label="Open menu"><svg class="ico"><use href="#i-menu"/></svg></button>
+    <a class="btn btn-ghost" href="{{ list_url }}"><svg class="ico"><use href="#i-back"/></svg>Notes</a>
+    {% if not readonly %}
+    <button type="button" class="status" id="save-status" data-state="saved" title="Click to retry saving"><span class="dot"></span><span id="save-status-text">All changes saved</span></button>
+    {% endif %}
+    <div class="ed-actions">
+      {% if readonly %}
+        <button class="btn btn-primary" form="f-restore"><svg class="ico"><use href="#i-restore"/></svg>Restore</button>
+        <button class="btn btn-ghost btn-danger-text" form="f-delete">Delete forever</button>
+      {% else %}
+        <button class="icon-btn" form="f-pin" aria-pressed="{{ note.is_pinned|yesno:'true,false' }}" aria-label="{% if note.is_pinned %}Unpin{% else %}Pin{% endif %} note" title="Pin"><svg class="ico"><use href="#i-pin"/></svg></button>
+        <button class="icon-btn" form="f-archive" aria-pressed="{{ note.is_archived|yesno:'true,false' }}" aria-label="{% if note.is_archived %}Unarchive{% else %}Archive{% endif %} note" title="Archive"><svg class="ico"><use href="#i-archive"/></svg></button>
+        <button class="icon-btn" form="f-trash" aria-label="Move to trash" title="Move to trash"><svg class="ico"><use href="#i-trash"/></svg></button>
+        <button class="btn btn-primary" type="submit">Save</button>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if readonly %}<p class="banner">This note is in the trash. Restore it to edit.</p>
+  {% elif note.is_archived %}<p class="banner">This note is archived.</p>{% endif %}
+  {% if form.errors %}<p class="banner banner-error" role="alert">{% for field, errs in form.errors.items %}{{ errs.0 }} {% endfor %}</p>{% endif %}
+
+  <div class="paper">
+    <label class="sr" for="{{ form.title.id_for_label }}">Title</label>
+    {{ form.title }}
+    <label class="sr" for="{{ form.body.id_for_label }}">Body</label>
+    {{ form.body }}
+    <div class="tag-row">
+      <svg class="ico"><use href="#i-tag"/></svg>
+      <label class="sr" for="{{ form.tags.id_for_label }}">Tags</label>
+      {{ form.tags }}
+    </div>
+    {% if nav_tags and not readonly %}
+    <div class="suggest" aria-label="Existing tags">{% for t in nav_tags %}<button type="button" class="chip-btn" data-add-tag="{{ t.name }}">{{ t.name }}</button>{% endfor %}</div>
+    {% endif %}
+  </div>
+  <p class="ed-foot"><span id="word-count">{{ word_count }} word{{ word_count|pluralize }}</span> &nbsp;Created {{ note.created_at|date:"M j, Y" }}</p>
+</form>
+
+{% if readonly %}
+<form id="f-restore" method="post" action="{% url 'notes:action' note.pk 'restore' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"></form>
+<form id="f-delete" method="post" action="{% url 'notes:action' note.pk 'delete' %}" data-confirm="Delete this note forever? This can't be undone." data-confirm-label="Delete forever">{% csrf_token %}<input type="hidden" name="next" value="{{ list_url }}?view=trash"></form>
+{% else %}
+<form id="f-pin" method="post" action="{% url 'notes:action' note.pk 'pin' %}" data-flush>{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"></form>
+<form id="f-archive" method="post" action="{% url 'notes:action' note.pk 'archive' %}" data-flush>{% csrf_token %}<input type="hidden" name="next" value="{{ list_url }}"></form>
+<form id="f-trash" method="post" action="{% url 'notes:action' note.pk 'trash' %}" data-flush data-confirm="Move this note to the trash? You can restore it later." data-confirm-label="Move to trash">{% csrf_token %}<input type="hidden" name="next" value="{{ list_url }}"></form>
+{% endif %}
+{% endblock %}
