@@ -1,0 +1,10 @@
+{% extends "auth.html" %}
+{% block title %}Create account – Ember{% endblock %}
+{% block auth %}
+<h1>Create your account</h1>
+<form method="post" novalidate>{% csrf_token %}
+  {% for field in form %}{% include "_field.html" %}{% endfor %}
+  <button class="btn btn-primary btn-block">Create account</button>
+</form>
+<p class="auth-alt">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+{% endblock %}
