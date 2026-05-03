@@ -1,0 +1,20 @@
+{% load humanize %}
+<article class="card" style="--i:{{ forloop.counter0 }}">
+  <h2 class="card-title"><a class="card-link" href="{% url 'notes:edit' note.pk %}">{{ note.display_title }}</a></h2>
+  {% if note.is_pinned %}<svg class="ico pin-mark" role="img" aria-label="Pinned"><use href="#i-pin"/></svg>{% endif %}
+  {% if note.body %}<p class="card-body">{{ note.body|truncatechars:420 }}</p>{% endif %}
+  {% if note.tags.all %}<ul class="chips">{% for t in note.tags.all %}<li>{{ t.name }}</li>{% endfor %}</ul>{% endif %}
+  <footer class="card-foot">
+    <time datetime="{{ note.updated_at|date:'c' }}" title="{{ note.updated_at }}">{{ note.updated_at|naturaltime }}</time>
+    <div class="card-actions">
+      {% if note.is_trashed %}
+        <form method="post" action="{% url 'notes:action' note.pk 'restore' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ current_path }}"><button class="icon-btn" aria-label="Restore note" title="Restore"><svg class="ico"><use href="#i-restore"/></svg></button></form>
+        <form method="post" action="{% url 'notes:action' note.pk 'delete' %}" data-confirm="Delete “{{ note.display_title }}” forever? This can't be undone." data-confirm-label="Delete forever">{% csrf_token %}<input type="hidden" name="next" value="{{ current_path }}"><button class="icon-btn icon-danger" aria-label="Delete forever" title="Delete forever"><svg class="ico"><use href="#i-trash"/></svg></button></form>
+      {% else %}
+        <form method="post" action="{% url 'notes:action' note.pk 'pin' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ current_path }}"><button class="icon-btn" aria-pressed="{{ note.is_pinned|yesno:'true,false' }}" aria-label="{% if note.is_pinned %}Unpin{% else %}Pin{% endif %} note" title="{% if note.is_pinned %}Unpin{% else %}Pin{% endif %}"><svg class="ico"><use href="#i-pin"/></svg></button></form>
+        <form method="post" action="{% url 'notes:action' note.pk 'archive' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ current_path }}"><button class="icon-btn" aria-label="{% if note.is_archived %}Unarchive{% else %}Archive{% endif %} note" title="{% if note.is_archived %}Unarchive{% else %}Archive{% endif %}"><svg class="ico"><use href="#i-archive"/></svg></button></form>
+        <form method="post" action="{% url 'notes:action' note.pk 'trash' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ current_path }}"><button class="icon-btn" aria-label="Move to trash" title="Move to trash"><svg class="ico"><use href="#i-trash"/></svg></button></form>
+      {% endif %}
+    </div>
+  </footer>
+</article>

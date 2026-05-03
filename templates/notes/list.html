@@ -1,0 +1,59 @@
+{% extends "app.html" %}
+{% block title %}{{ heading }} – Ember{% endblock %}
+{% block main %}
+<header class="topbar">
+  <button type="button" class="icon-btn only-mobile" data-drawer-open aria-label="Open menu"><svg class="ico"><use href="#i-menu"/></svg></button>
+  <form class="search" method="get" role="search">
+    <input type="hidden" name="view" value="{{ view }}">
+    {% if tag %}<input type="hidden" name="tag" value="{{ tag }}">{% endif %}
+    <input type="hidden" name="layout" value="{{ layout }}">
+    <svg class="ico"><use href="#i-search"/></svg>
+    <input id="search-input" type="search" name="q" value="{{ q }}" placeholder="Search notes and tags" aria-label="Search notes" maxlength="100" autocomplete="off">
+    <kbd class="hint" aria-hidden="true">/</kbd>
+    <label class="sr" for="sort">Sort by</label>
+    <select id="sort" name="sort" data-autosubmit>{% for key, label in sorts %}<option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button class="sr">Search</button>
+  </form>
+  <div class="seg" role="group" aria-label="Layout">
+    <a href="?{{ qs_base }}&layout=grid" {% if layout == 'grid' %}aria-current="true"{% endif %} aria-label="Grid layout"><svg class="ico"><use href="#i-grid"/></svg></a>
+    <a href="?{{ qs_base }}&layout=list" {% if layout == 'list' %}aria-current="true"{% endif %} aria-label="List layout"><svg class="ico"><use href="#i-list"/></svg></a>
+  </div>
+</header>
+
+<div class="page-head">
+  <h1>{{ heading }}</h1>
+  <p class="count">{{ page.paginator.count }} note{{ page.paginator.count|pluralize }}{% if q %} matching “{{ q }}”{% endif %}</p>
+  {% if view == 'trash' and page.paginator.count %}
+  <form method="post" action="{% url 'notes:empty_trash' %}" data-confirm="Permanently delete every note in the trash? This can't be undone." data-confirm-label="Empty trash">{% csrf_token %}
+    <button class="btn btn-ghost btn-danger-text">Empty trash</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if page.object_list %}
+  <div class="notes {{ layout }}">
+    {% for note in page.object_list %}{% include "notes/_card.html" %}{% endfor %}
+  </div>
+  {% if page.paginator.num_pages > 1 %}
+  <nav class="pager" aria-label="Pagination">
+    {% if page.has_previous %}<a class="btn btn-ghost" href="?{{ qs_base }}&page={{ page.previous_page_number }}">Newer</a>{% endif %}
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="btn btn-ghost" href="?{{ qs_base }}&page={{ page.next_page_number }}">Older</a>{% endif %}
+  </nav>
+  {% endif %}
+{% else %}
+  <div class="empty">
+    {% if filtered %}
+      <h2>No notes match</h2>
+      <p>Try different words, or clear the search and filters.</p>
+      <a class="btn btn-ghost" href="{% url 'notes:list' %}?view={{ view }}">Clear search</a>
+    {% else %}
+      <h2>{{ empty.0 }}</h2>
+      <p>{{ empty.1 }}</p>
+      {% if view == 'all' %}
+      <form method="post" action="{% url 'notes:create' %}">{% csrf_token %}<button class="btn btn-primary">Write a note</button></form>
+      {% endif %}
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}
