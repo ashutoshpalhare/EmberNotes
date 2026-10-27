@@ -1,0 +1,17 @@
+{% extends "app.html" %}
+{% block title %}Import notes – Ember{% endblock %}
+{% block main %}
+<section class="data-panel">
+  <a class="btn btn-ghost" href="{% url 'notes:list' %}">← Back to notes</a>
+  <h1>Import your notes</h1>
+  <p>Restore notes from an Ember JSON export. Imported notes are added to your account; existing notes are not overwritten.</p>
+  <form class="import-drop" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="import-file">Ember Notes export (.json, max 2 MB)</label>
+    <input id="import-file" type="file" name="file" accept=".json,application/json" required>
+    <p>Import is all-or-nothing. Unsupported files and invalid entries are rejected without creating partial imports.</p>
+    <button class="btn btn-primary" type="submit">Validate and import</button>
+  </form>
+  <p><a href="{% url 'notes:export' %}">Download a fresh backup instead</a></p>
+</section>
+{% endblock %}
