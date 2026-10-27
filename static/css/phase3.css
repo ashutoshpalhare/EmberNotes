@@ -1,0 +1,18 @@
+/* Phase 3 additions */
+.markdown-preview{min-height:50vh;padding:8px 0;color:var(--text);font:400 18px/1.7 var(--read);overflow-wrap:anywhere}
+.markdown-preview[hidden]{display:none}
+.markdown-preview h1,.markdown-preview h2,.markdown-preview h3{font-family:var(--ui);line-height:1.25;margin:1.2em 0 .55em}
+.markdown-preview h1{font-size:1.8em}.markdown-preview h2{font-size:1.45em}.markdown-preview h3{font-size:1.2em}
+.markdown-preview p,.markdown-preview ul,.markdown-preview ol,.markdown-preview blockquote,.markdown-preview pre,.markdown-preview table{margin:.8em 0}
+.markdown-preview blockquote{border-left:3px solid var(--ember);padding-left:1em;color:var(--muted)}
+.markdown-preview pre{overflow:auto;padding:14px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);font-size:14px}
+.markdown-preview code{font:.85em ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--sunk);padding:.12em .3em;border-radius:4px}
+.markdown-preview pre code{padding:0;background:none}
+.markdown-preview a{color:var(--gold);text-decoration:underline}
+.markdown-preview table{border-collapse:collapse;width:100%;font-size:15px}
+.markdown-preview th,.markdown-preview td{border:1px solid var(--line-hi);padding:7px 10px;text-align:left}
+.data-panel{max-width:760px;margin:28px auto}
+.data-panel h1{font-size:30px;letter-spacing:-.03em;margin:18px 0 8px}
+.data-panel p{color:var(--muted);margin:8px 0 18px}
+.import-drop{display:grid;gap:10px;padding:20px;border:1px dashed var(--line-hi);border-radius:14px;background:var(--raised)}
+.import-drop input{max-width:100%;font:inherit;color:var(--muted)}
