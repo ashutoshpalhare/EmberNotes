@@ -1,0 +1,56 @@
+name: Browser E2E
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+      - name: Prepare test database and account
+        env:
+          DJANGO_DEBUG: "True"
+          DJANGO_SECRET_KEY: browser-test-only-secret
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+        run: |
+          python manage.py migrate --noinput
+          python manage.py shell -c "from django.contrib.auth import get_user_model; get_user_model().objects.filter(username='e2e-user').delete(); get_user_model().objects.create_user('e2e-user', password='E2E-strong-pass-123!')"
+      - name: Install Playwright
+        run: npm install --no-save @playwright/test && npx playwright install --with-deps chromium
+      - name: Start Django server
+        env:
+          DJANGO_DEBUG: "True"
+          DJANGO_SECRET_KEY: browser-test-only-secret
+          DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+        run: |
+          python manage.py runserver 127.0.0.1:8000 > /tmp/ember-django.log 2>&1 &
+          echo $! > /tmp/ember-django.pid
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/accounts/login/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/ember-django.log
+          exit 1
+      - name: Run browser tests
+        run: npx playwright test
