@@ -37,21 +37,21 @@ jobs:
 
       - name: Run Django tests
         env:
-          DJANGO_DEBUG: "True"
+          DJANGO_DEBUG: "False"
           DJANGO_SECRET_KEY: ci-only-not-a-production-secret
           DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
         run: python manage.py test
 
       - name: Run Django system check
         env:
-          DJANGO_DEBUG: "True"
+          DJANGO_DEBUG: "False"
           DJANGO_SECRET_KEY: ci-only-not-a-production-secret
           DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
         run: python manage.py check
 
       - name: Check for missing migrations
         env:
-          DJANGO_DEBUG: "True"
+          DJANGO_DEBUG: "False"
           DJANGO_SECRET_KEY: ci-only-not-a-production-secret
           DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
         run: python manage.py makemigrations --check --dry-run
