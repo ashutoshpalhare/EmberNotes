@@ -16,3 +16,5 @@
 .data-panel p{color:var(--muted);margin:8px 0 18px}
 .import-drop{display:grid;gap:10px;padding:20px;border:1px dashed var(--line-hi);border-radius:14px;background:var(--raised)}
 .import-drop input{max-width:100%;font:inherit;color:var(--muted)}
+
+.paper textarea[hidden]{display:none}
