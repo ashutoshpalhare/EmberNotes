@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "django.contrib.staticfiles",
     "axes",
-    "accounts",
+    "accounts.apps.AccountsConfig",
     "notes",
 ]
 
