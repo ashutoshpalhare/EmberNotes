@@ -96,7 +96,7 @@ if DATABASE_URL:
     import dj_database_url
     DATABASES = {"default": dj_database_url.parse(
         DATABASE_URL, conn_max_age=int(os.environ.get("DB_CONN_MAX_AGE", "60")),
-        conn_health_checks=True,
+        conn_health_checks=True, ssl_require=PROD,
     )}
 else:
     DATABASES = {
