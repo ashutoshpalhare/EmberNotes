@@ -8,5 +8,6 @@
   <input type="hidden" name="next" value="{{ next }}">
   <button class="btn btn-primary btn-block">Sign in</button>
 </form>
+<p class="auth-alt"><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
 <p class="auth-alt">New to Ember? <a href="{% url 'signup' %}">Create an account</a></p>
 {% endblock %}
