@@ -9,3 +9,7 @@ staticfiles/
 
 # Ignore setup script
 setup_history.py
+
+# Database backups and pre-restore safety copies contain private user data
+/backups/
+*.pre-restore-*
