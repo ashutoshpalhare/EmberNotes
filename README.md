@@ -199,3 +199,26 @@ requirements.txt
 ## License
 
 No license file was present when this README was written. Add a `LICENSE` file before inviting reuse or redistribution; without an explicit license, normal copyright restrictions apply.
+
+
+## Phase 3: Markdown preview and data portability
+
+Phase 3 adds a server-rendered Markdown preview with HTML sanitization, versioned JSON export/import, and browser smoke tests.
+
+- Use **Preview** in the note editor to render headings, emphasis, lists, tables, blockquotes, links, and fenced code. The preview endpoint sanitizes generated HTML before it reaches the browser.
+- Use **Export notes (JSON)** in the sidebar to download all of your own notes, including tags, pinned/archive state, and trash state. The export is private and marked `no-store`.
+- Use **Import notes** to add notes from an Ember export. Imports are additive, limited to 2 MB / 5,000 notes, validated before writes, and processed atomically. Existing notes are not overwritten.
+- The export format is versioned (`format: ember-notes`, `version: 1`). Keep a separate backup before importing into an account with important data.
+- Django unit tests cover export privacy, import validation/atomicity, and Markdown sanitization. The separate Browser E2E workflow uses Playwright + Chromium to smoke-test login, editor preview, and export/import navigation.
+
+Run browser tests locally after installing Playwright and Chromium:
+
+```bash
+npm install --no-save @playwright/test
+npx playwright install chromium
+python manage.py migrate
+python manage.py runserver
+npx playwright test
+```
+
+Browser tests use `playwright.config.cjs` and `tests/e2e/`. They expect a local test account named `e2e-user` with password `E2E-strong-pass-123!`; create it only in a local test database, never in production.

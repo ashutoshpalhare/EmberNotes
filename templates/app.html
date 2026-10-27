@@ -15,6 +15,13 @@
       <a href="{% url 'notes:list' %}?view=archive" {% if current_view == 'archive' and not tag %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-archive"/></svg>Archive<span>{{ nav_counts.archive }}</span></a>
       <a href="{% url 'notes:list' %}?view=trash" {% if current_view == 'trash' %}aria-current="page"{% endif %}><svg class="ico"><use href="#i-trash"/></svg>Trash<span>{{ nav_counts.trash }}</span></a>
     </nav>
+    <div class="nav-group">
+      <h2>Your data</h2>
+      <nav class="nav">
+        <a href="{% url 'notes:export' %}">Export notes (JSON)</a>
+        <a href="{% url 'notes:import' %}" {% if request.resolver_match.url_name == 'import' %}aria-current="page"{% endif %}>Import notes</a>
+      </nav>
+    </div>
     {% if nav_tags %}
     <div class="nav-group">
       <h2>Tags</h2>
