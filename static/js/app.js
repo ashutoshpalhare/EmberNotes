@@ -3,7 +3,6 @@
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const typing = (el) => el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
 
-  /* Toasts */
   const stack = $('#toasts');
   const dismiss = (el) => { el.classList.add('leaving'); setTimeout(() => el.remove(), 220); };
   function toast(text, kind = 'info') {
@@ -18,7 +17,6 @@
     $('.toast-x', el)?.addEventListener('click', () => dismiss(el));
   });
 
-  /* Confirm dialog */
   const dlg = $('#confirm-dialog');
   const ask = (message, label) => new Promise((resolve) => {
     $('#confirm-msg').textContent = message;
@@ -28,14 +26,11 @@
     dlg.showModal();
   });
 
-  /* Mobile drawer */
   const setDrawer = (open) => document.body.classList.toggle('drawer-open', open);
   $$('[data-drawer-open]').forEach((b) => b.addEventListener('click', () => setDrawer(true)));
   $$('[data-drawer-close]').forEach((b) => b.addEventListener('click', () => setDrawer(false)));
-
   $('[data-autosubmit]')?.addEventListener('change', (e) => e.target.form.requestSubmit());
 
-  /* Forms that need a confirmation and/or a flush of pending editor changes */
   document.addEventListener('submit', async (e) => {
     const f = e.target;
     if (!(f instanceof HTMLFormElement) || !(f.dataset.confirm || f.hasAttribute('data-flush'))) return;
@@ -48,15 +43,13 @@
     f.submit();
   });
 
-  /* Shortcuts */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') setDrawer(false);
     if (typing(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === '/' && $('#search-input')) { e.preventDefault(); $('#search-input').focus(); }
-    if (e.key === 'n') { $('#new-note-form')?.requestSubmit(); }
+    if (e.key === 'n') $('#new-note-form')?.requestSubmit();
   });
 
-  /* Editor with autosave */
   const form = $('#note-form');
   if (!form) return;
   const url = form.dataset.autosaveUrl;
@@ -65,7 +58,43 @@
   const grow = () => { f.body.style.height = 'auto'; f.body.style.height = f.body.scrollHeight + 'px'; };
   const words = () => { const n = f.body.value.trim().split(/\s+/).filter(Boolean).length; wc.textContent = `${n} word${n === 1 ? '' : 's'}`; };
   grow();
-  if (!url) return; // read-only (trashed) note
+  const previewButton = $('[data-preview-toggle]');
+  const previewPane = $('#markdown-preview');
+  if (previewButton && previewPane && form.dataset.previewUrl) {
+    let showingPreview = false;
+    previewButton.addEventListener('click', async () => {
+      if (showingPreview) {
+        previewPane.hidden = true;
+        f.body.hidden = false;
+        previewButton.textContent = 'Preview';
+        previewButton.setAttribute('aria-pressed', 'false');
+        showingPreview = false;
+        grow();
+        return;
+      }
+      previewButton.disabled = true;
+      previewButton.textContent = 'Loading…';
+      try {
+        const response = await fetch(form.dataset.previewUrl, {
+          method: 'POST', credentials: 'same-origin',
+          headers: {'Content-Type': 'application/json', 'X-CSRFToken': f.csrfmiddlewaretoken.value},
+          body: JSON.stringify({body: f.body.value})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Preview unavailable');
+        previewPane.innerHTML = data.html;
+        f.body.hidden = true;
+        previewPane.hidden = false;
+        previewButton.textContent = 'Edit';
+        previewButton.setAttribute('aria-pressed', 'true');
+        showingPreview = true;
+      } catch (error) {
+        toast(error.message || 'Preview unavailable.', 'error');
+        previewButton.textContent = 'Preview';
+      } finally { previewButton.disabled = false; }
+    });
+  }
+  if (!url) return;
 
   const pill = $('#save-status'), pillText = $('#save-status-text');
   let timer = null, inflight = null, dirty = false, failed = false;
