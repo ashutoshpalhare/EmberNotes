@@ -118,8 +118,14 @@ def note_autosave(request, pk):
         data = json.loads(request.body or b"{}")
         if not isinstance(data, dict):
             raise ValueError
-    except ValueError:
+    except (ValueError, UnicodeDecodeError):
         return JsonResponse({"error": "Invalid request."}, status=400)
+
+    # JSON clients must send text fields, not arrays/objects/numbers that Django's
+    # form coercion might otherwise turn into surprising string values.
+    if any(key in data and not isinstance(data[key], str) for key in ("title", "body", "tags")):
+        return JsonResponse({"error": "Title, body, and tags must be text."}, status=400)
+
     form = NoteForm({"title": data.get("title", ""), "body": data.get("body", ""),
                      "tags": data.get("tags", "")}, instance=note)
     if not form.is_valid():
