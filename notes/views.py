@@ -1,21 +1,27 @@
 import json
 from urllib.parse import urlencode
 
+import bleach
+import markdown
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
 from django.db.models.functions import Lower
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import NoteForm
+from .forms import NoteForm, parse_tags
 from .models import Note
 
 PAGE_SIZE = 24
+MAX_IMPORT_BYTES = 2 * 1024 * 1024
+MAX_IMPORT_NOTES = 5000
 VIEWS = {
     "all": ("All notes", "Nothing here yet", "Create your first note and it will show up here."),
     "pinned": ("Pinned", "No pinned notes", "Pin a note to keep it at the top of your list."),
@@ -27,6 +33,12 @@ SORTS = {
     "created": ("Date created", ["-created_at"]),
     "title": ("Title A to Z", [Lower("title").asc(), "-updated_at"]),
 }
+MARKDOWN_TAGS = [
+    "p", "br", "hr", "strong", "em", "del", "blockquote", "ul", "ol", "li",
+    "h1", "h2", "h3", "h4", "h5", "h6", "pre", "code", "a", "table",
+    "thead", "tbody", "tr", "th", "td",
+]
+MARKDOWN_ATTRIBUTES = {"a": ["href", "title"], "code": ["class"]}
 
 
 def _safe_next(request, fallback):
@@ -121,8 +133,6 @@ def note_autosave(request, pk):
     except (ValueError, UnicodeDecodeError):
         return JsonResponse({"error": "Invalid request."}, status=400)
 
-    # JSON clients must send text fields, not arrays/objects/numbers that Django's
-    # form coercion might otherwise turn into surprising string values.
     if any(key in data and not isinstance(data[key], str) for key in ("title", "body", "tags")):
         return JsonResponse({"error": "Title, body, and tags must be text."}, status=400)
 
@@ -137,9 +147,123 @@ def note_autosave(request, pk):
 
 @login_required
 @require_POST
+def note_preview(request):
+    """Render a small Markdown subset and sanitize the HTML before returning it."""
+    try:
+        data = json.loads(request.body or b"{}")
+        if not isinstance(data, dict) or not isinstance(data.get("body", ""), str):
+            raise ValueError
+        body = data.get("body", "")
+        if len(body) > 100_000:
+            return JsonResponse({"error": "Preview is limited to 100,000 characters."}, status=400)
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid preview request."}, status=400)
+
+    rendered = markdown.markdown(
+        body, extensions=["fenced_code", "tables", "sane_lists"], output_format="html5"
+    )
+    safe_html = bleach.clean(
+        rendered, tags=MARKDOWN_TAGS, attributes=MARKDOWN_ATTRIBUTES,
+        protocols=["http", "https", "mailto"], strip=True,
+    )
+    return JsonResponse({"html": safe_html})
+
+
+@login_required
+def export_notes(request):
+    """Download only the current user's notes in a versioned JSON format."""
+    notes = Note.objects.filter(user=request.user).prefetch_related("tags").order_by("pk")
+    payload = {
+        "format": "ember-notes",
+        "version": 1,
+        "exported_at": timezone.now().isoformat(),
+        "notes": [{
+            "title": note.title,
+            "body": note.body,
+            "tags": sorted(tag.name for tag in note.tags.all()),
+            "is_pinned": note.is_pinned,
+            "is_archived": note.is_archived,
+            "deleted_at": note.deleted_at.isoformat() if note.deleted_at else None,
+            "created_at": note.created_at.isoformat(),
+            "updated_at": note.updated_at.isoformat(),
+        } for note in notes],
+    }
+    response = HttpResponse(json.dumps(payload, ensure_ascii=False, indent=2), content_type="application/json; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="ember-notes-export.json"'
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def import_notes(request):
+    if request.method == "GET":
+        return render(request, "notes/import.html", {"current_view": ""})
+
+    upload = request.FILES.get("file")
+    if not upload:
+        messages.error(request, "Choose an Ember JSON export file to import.")
+        return redirect("notes:import")
+    if upload.size > MAX_IMPORT_BYTES:
+        messages.error(request, "Import files must be 2 MB or smaller.")
+        return redirect("notes:import")
+
+    try:
+        payload = json.loads(upload.read().decode("utf-8"))
+        if not isinstance(payload, dict) or payload.get("format") != "ember-notes" or payload.get("version") != 1:
+            raise ValueError("This is not a supported Ember Notes export.")
+        records = payload.get("notes")
+        if not isinstance(records, list) or len(records) > MAX_IMPORT_NOTES:
+            raise ValueError("The export must contain a list of at most 5,000 notes.")
+        cleaned = []
+        for item in records:
+            if not isinstance(item, dict):
+                raise ValueError("Every note entry must be an object.")
+            title, body, tags = item.get("title", ""), item.get("body", ""), item.get("tags", [])
+            if not isinstance(title, str) or len(title) > 200:
+                raise ValueError("A note title is invalid or longer than 200 characters.")
+            if not isinstance(body, str) or len(body) > 100_000:
+                raise ValueError("A note body is invalid or longer than 100,000 characters.")
+            if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
+                raise ValueError("Note tags must be a list of text values.")
+            normalized_tags = parse_tags(",".join(tags))
+            if not isinstance(item.get("is_pinned", False), bool) or not isinstance(item.get("is_archived", False), bool):
+                raise ValueError("Pin and archive values must be true or false.")
+            deleted_at = item.get("deleted_at")
+            if deleted_at is not None:
+                if not isinstance(deleted_at, str):
+                    raise ValueError("A deleted-at value is invalid.")
+                deleted_at = timezone.datetime.fromisoformat(deleted_at)
+                if timezone.is_naive(deleted_at):
+                    deleted_at = timezone.make_aware(deleted_at, timezone.get_current_timezone())
+            cleaned.append({
+                "title": title, "body": body, "tags": normalized_tags,
+                "is_pinned": item.get("is_pinned", False),
+                "is_archived": item.get("is_archived", False),
+                "deleted_at": deleted_at,
+            })
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, TypeError, OverflowError) as exc:
+        messages.error(request, f"Import rejected: {exc}")
+        return redirect("notes:import")
+
+    with transaction.atomic():
+        for item in cleaned:
+            note = Note.objects.create(
+                user=request.user, title=item["title"], body=item["body"],
+                is_pinned=item["is_pinned"] and item["deleted_at"] is None,
+                is_archived=item["is_archived"] and item["deleted_at"] is None,
+                deleted_at=item["deleted_at"],
+            )
+            note.set_tags(item["tags"])
+    messages.success(request, f"Imported {len(cleaned)} note{'s' if len(cleaned) != 1 else ''}.")
+    return redirect("notes:list")
+
+
+@login_required
+@require_POST
 def note_action(request, pk, action):
     note = get_object_or_404(Note, pk=pk, user=request.user)
-    qs = Note.objects.filter(pk=note.pk, user=request.user)  # .update() keeps updated_at untouched
+    qs = Note.objects.filter(pk=note.pk, user=request.user)
     fallback = reverse("notes:list")
     if action not in {"pin", "archive", "trash", "restore", "delete"}:
         raise Http404
