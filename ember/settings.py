@@ -123,13 +123,15 @@ STORAGES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 ADMIN_URL = os.environ.get("DJANGO_ADMIN_URL", "admin/").strip("/") + "/"
 
-# Security
+# Security. These production settings assume HTTPS is correctly configured at the host.
 SESSION_COOKIE_SECURE = PROD
 CSRF_COOKIE_SECURE = PROD
 SESSION_COOKIE_SAMESITE = "Lax"
 SECURE_SSL_REDIRECT = PROD and env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
 SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000")) if PROD else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = PROD
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 X_FRAME_OPTIONS = "DENY"
 if env_bool("DJANGO_BEHIND_PROXY", False):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
