@@ -16,7 +16,7 @@ def signup(request):
     form = SignupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
-        login(request, user)
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         security_logger.info("account_signup_succeeded")
         return redirect("notes:list")
     return render(request, "registration/signup.html", {"form": form})
