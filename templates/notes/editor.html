@@ -2,7 +2,7 @@
 {% block title %}{{ note.display_title }} – Ember{% endblock %}
 {% block main %}
 <form id="note-form" class="editor" method="post" novalidate
-      {% if not readonly %}data-autosave-url="{% url 'notes:autosave' note.pk %}"{% endif %}>
+      {% if not readonly %}data-autosave-url="{% url 'notes:autosave' note.pk %}" data-preview-url="{% url 'notes:preview' %}"{% endif %}>
   {% csrf_token %}
   <header class="ed-bar">
     <button type="button" class="icon-btn only-mobile" data-drawer-open aria-label="Open menu"><svg class="ico"><use href="#i-menu"/></svg></button>
@@ -15,6 +15,7 @@
         <button class="btn btn-primary" form="f-restore"><svg class="ico"><use href="#i-restore"/></svg>Restore</button>
         <button class="btn btn-ghost btn-danger-text" form="f-delete">Delete forever</button>
       {% else %}
+        <button type="button" class="btn btn-ghost" id="preview-toggle" data-preview-toggle aria-pressed="false">Preview</button>
         <button class="icon-btn" form="f-pin" aria-pressed="{{ note.is_pinned|yesno:'true,false' }}" aria-label="{% if note.is_pinned %}Unpin{% else %}Pin{% endif %} note" title="Pin"><svg class="ico"><use href="#i-pin"/></svg></button>
         <button class="icon-btn" form="f-archive" aria-pressed="{{ note.is_archived|yesno:'true,false' }}" aria-label="{% if note.is_archived %}Unarchive{% else %}Archive{% endif %} note" title="Archive"><svg class="ico"><use href="#i-archive"/></svg></button>
         <button class="icon-btn" form="f-trash" aria-label="Move to trash" title="Move to trash"><svg class="ico"><use href="#i-trash"/></svg></button>
@@ -32,6 +33,7 @@
     {{ form.title }}
     <label class="sr" for="{{ form.body.id_for_label }}">Body</label>
     {{ form.body }}
+    <div id="markdown-preview" class="markdown-preview" hidden aria-label="Markdown preview" aria-live="polite"></div>
     <div class="tag-row">
       <svg class="ico"><use href="#i-tag"/></svg>
       <label class="sr" for="{{ form.tags.id_for_label }}">Tags</label>
@@ -41,7 +43,7 @@
     <div class="suggest" aria-label="Existing tags">{% for t in nav_tags %}<button type="button" class="chip-btn" data-add-tag="{{ t.name }}">{{ t.name }}</button>{% endfor %}</div>
     {% endif %}
   </div>
-  <p class="ed-foot"><span id="word-count">{{ word_count }} word{{ word_count|pluralize }}</span> &nbsp;Created {{ note.created_at|date:"M j, Y" }}</p>
+  <p class="ed-foot"><span id="word-count">{{ word_count }} word{{ word_count|pluralize }}</span> &nbsp;Created {{ note.created_at|date:"M j, Y" }} · Markdown supported in preview</p>
 </form>
 
 {% if readonly %}
