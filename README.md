@@ -65,6 +65,8 @@ Open http://127.0.0.1:8000/ and create an account.
 
 ## Tests and checks
 
+GitHub Actions runs the test suite, Django system check, and migration consistency check on pull requests to `main` and pushes to `main`. See `.github/workflows/django-ci.yml`.
+
 Run the project's Django tests:
 
 ```bash

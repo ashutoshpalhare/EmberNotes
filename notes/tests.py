@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -279,6 +279,7 @@ class UnitTests(TestCase):
         self.assertEqual(parse_tags(" Work , #ideas,WORK,, "), ["work", "ideas"])
         self.assertEqual(parse_tags(""), [])
 
+    @override_settings(DEBUG=False)
     def test_error_pages_render(self):
         self.assertEqual(self.client.get("/definitely-missing/").status_code, 404)
         self.assertContains(self.client.get("/definitely-missing/"), "Note not found", status_code=404)
