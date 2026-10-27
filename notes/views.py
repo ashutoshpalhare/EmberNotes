@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 import bleach
 import markdown
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -242,7 +243,7 @@ def import_notes(request):
                 "is_archived": item.get("is_archived", False),
                 "deleted_at": deleted_at,
             })
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, TypeError, OverflowError) as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError, TypeError, OverflowError, ValidationError) as exc:
         messages.error(request, f"Import rejected: {exc}")
         return redirect("notes:import")
 
